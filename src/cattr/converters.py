@@ -1,6 +1,6 @@
 from enum import Enum
 import sys
-from typing import Mapping, Sequence, Optional, TypeVar, Any
+from typing import Mapping, Sequence, Optional, TypeVar, Any, Type, Callable
 from ._compat import (
     bytes,
     ForwardRef,
@@ -277,7 +277,7 @@ class Converter(object):
     # Attrs classes.
 
     def structure_attrs_fromtuple(self, obj, cl, context):
-        # type: (Sequence[Any], Type) -> Any
+        # type: (Sequence[Any], Type, Context) -> Any
         """Load an attrs class from a sequence (tuple)."""
         if not context:
             context = Context(cl)
@@ -301,7 +301,7 @@ class Converter(object):
         return self._structure_func.dispatch(type_)(value, type_, context)
 
     def structure_attrs_fromdict(self, obj, cl, context=None):
-        # type: (Mapping, Type) -> Any
+        # type: (Mapping, Type, Context) -> Any
         """Instantiate an attrs class from a mapping (dict)."""
         # For public use.
         if not context:
@@ -325,7 +325,7 @@ class Converter(object):
         return cl(**conv_obj)
 
     def _structure_list(self, obj, cl, context):
-        # type: (Type[GenericMeta], Iterable[T]) -> List[T]
+        # type: (Type[GenericMeta], Iterable[T], Context) -> List[T]
         """Convert an iterable to a potentially generic list."""
         if is_bare(cl) or cl.__args__[0] is Any:
             return [e for e in obj]
@@ -337,7 +337,7 @@ class Converter(object):
             ]
 
     def _structure_set(self, obj, cl, context):
-        # type: (Type[GenericMeta], Iterable[T]) -> MutableSet[T]
+        # type: (Type[GenericMeta], Iterable[T], Context) -> MutableSet[T]
         """Convert an iterable into a potentially generic set."""
         if is_bare(cl) or cl.__args__[0] is Any:
             return set(obj)
@@ -349,7 +349,7 @@ class Converter(object):
             }
 
     def _structure_frozenset(self, obj, cl, context):
-        # type: (Type[GenericMeta], Iterable[T]) -> FrozenSet[T]
+        # type: (Type[GenericMeta], Iterable[T], Context) -> FrozenSet[T]
         """Convert an iterable into a potentially generic frozenset."""
         if is_bare(cl) or cl.__args__[0] is Any:
             return frozenset(obj)
@@ -361,7 +361,7 @@ class Converter(object):
             )
 
     def _structure_dict(self, obj, cl, context):
-        # type: (Type[GenericMeta], Mapping[T, V]) -> Dict[T, V]
+        # type: (Type[GenericMeta], Mapping[T, V], Context) -> Dict[T, V]
         """Convert a mapping into a potentially generic dict."""
         if is_bare(cl) or cl.__args__ == (Any, Any):
             return dict(obj)
@@ -389,7 +389,7 @@ class Converter(object):
                 }
 
     def _structure_union(self, obj, union, context):
-        # type: (_Union, Any) -> Any
+        # type: (_Union, Any, Context) -> Any
         """Deal with converting a union."""
         # Unions with NoneType in them are basically optionals.
         # We check for NoneType early and handle the case of obj being None,
@@ -405,6 +405,7 @@ class Converter(object):
                     if union_params[1] is NoneType
                     else union_params[1]
                 )
+                other = context.evaluate(other)
                 # We can't actually have a Union of a Union, so this is safe.
                 return self._structure_func.dispatch(other)(
                     obj, other, context
@@ -422,7 +423,7 @@ class Converter(object):
         return self._structure_func.dispatch(cl)(obj, cl, context)
 
     def _structure_tuple(self, obj, tup, context):
-        # type: (Type[Tuple], Iterable) -> Any
+        # type: (Type[Tuple], Iterable, Context) -> Any
         """Deal with converting to a tuple."""
         tup_params = tup.__args__
         has_ellipsis = tup_params and tup_params[-1] is Ellipsis
