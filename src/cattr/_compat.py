@@ -1,3 +1,4 @@
+import inspect
 import sys
 from typing import (
     Dict,
@@ -8,6 +9,11 @@ from typing import (
     Sequence,
     Tuple,
 )
+
+try:
+    from typing import ForwardRef
+except ImportError:
+    from typing import _ForwardRef as ForwardRef  # noqa
 
 version_info = sys.version_info[0:3]
 is_py2 = version_info[0] == 2
@@ -35,6 +41,11 @@ if is_py37 or is_py38:
             obj is Union
             or isinstance(obj, _GenericAlias)
             and obj.__origin__ is Union
+        )
+
+    def is_forward_ref_type(obj):
+        return isinstance(obj, ForwardRef) or (
+            isinstance(obj, _GenericAlias) and obj.__origin__ is ForwardRef
         )
 
     def is_sequence(type):
@@ -90,6 +101,9 @@ else:
         """Return true if the object is a union. """
         return isinstance(obj, _Union)
 
+    def is_forward_ref_type(obj):
+        return isinstance(obj, ForwardRef)
+
     def is_frozenset(type):
         return issubclass(type, FrozenSet)
 
@@ -97,6 +111,8 @@ else:
         return issubclass(type, MutableSet)
 
     def is_sequence(type):
+        if not inspect.isclass(type):
+            return False
         if is_py2:
             is_string = issubclass(type, basestring)  # noqa:F821
         else:
