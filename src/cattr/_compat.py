@@ -9,6 +9,11 @@ from typing import (
     Tuple,
 )
 
+try:
+    from typing import ForwardRef
+except ImportError:
+    from typing import _ForwardRef as ForwardRef  # noqa
+
 version_info = sys.version_info[0:3]
 is_py2 = version_info[0] == 2
 is_py3 = version_info[0] == 3
@@ -34,6 +39,13 @@ if is_py37:
             obj is Union
             or isinstance(obj, _GenericAlias)
             and obj.__origin__ is Union
+        )
+
+    def is_forward_ref_type(obj):
+        return (
+            obj is ForwardRef
+            or (isinstance(obj, _GenericAlias)
+            and obj.__origin__ is ForwardRef)
         )
 
     def is_sequence(type):
@@ -88,6 +100,9 @@ else:
     def is_union_type(obj):
         """Return true if the object is a union. """
         return isinstance(obj, _Union)
+
+    def is_forward_ref_type(obj):
+        return isinstance(obj, ForwardRef)
 
     def is_frozenset(type):
         return issubclass(type, FrozenSet)

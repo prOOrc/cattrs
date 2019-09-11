@@ -159,8 +159,9 @@ def make_dict_unstructure_fn(cl, converter, **kwargs):
     lines.append("    }")
 
     total_lines = lines + post_lines + ["    return res"]
+    lines_string = "\n".join(total_lines)
 
-    eval(compile("\n".join(total_lines), "", "exec"), globs)
+    eval(compile(lines_string, "", "exec"), globs)
 
     fn = globs[fn_name]
 

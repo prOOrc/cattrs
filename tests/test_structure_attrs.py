@@ -122,7 +122,7 @@ def test_structure_union_explicit(converter, cl_and_vals_a, cl_and_vals_b):
     cl_a, vals_a = cl_and_vals_a
     cl_b, vals_b = cl_and_vals_b
 
-    def dis(obj, _):
+    def dis(obj, _, owner_class):
         return converter.structure(obj, cl_a)
 
     converter.register_structure_hook(Union[cl_a, cl_b], dis)
