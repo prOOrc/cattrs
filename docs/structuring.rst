@@ -273,7 +273,7 @@ converters work out of the box. Given a mapping ``d`` and class ``A``,
     >>> @attr.s
     ... class A:
     ...     a = attr.ib()
-    ...     b = attr.ib(convert=int)
+    ...     b = attr.ib(converter=int)
     ...
     >>> cattr.structure({'a': 1, 'b': '2'}, A)
     A(a=1, b=2)
@@ -287,7 +287,7 @@ converters work out of the box. Given a mapping ``d`` and class ``A``,
     >>> @attr.s
     ... class A:
     ...     a = attr.ib()
-    ...     b = attr.ib(convert=int)
+    ...     b = attr.ib(converter=int)
     ...
     >>> cattr.structure_attrs_fromtuple(['string', '2'], A)
     A(a='string', b=2)
@@ -301,7 +301,7 @@ Loading from tuples can be made the default by creating a new ``Converter`` with
     >>> @attr.s
     ... class A:
     ...     a = attr.ib()
-    ...     b = attr.ib(convert=int)
+    ...     b = attr.ib(converter=int)
     ...
     >>> converter.structure(['string', '2'], A)
     A(a='string', b=2)
