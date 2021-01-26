@@ -1,0 +1,12 @@
+stages:
+  - build
+
+build:
+  stage: build
+  tags:
+    - devpi
+  script:
+    - ~/publish_package.sh
+  when: always
+  only:
+    - tags
