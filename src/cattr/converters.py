@@ -70,6 +70,8 @@ class Converter(object):
         "_union_registry",
         "_structure_func",
         "_forward_ref_owners_registry",
+        "_updated_forward_ref_owners",
+        "_evaluated_forward_refs_registry",
     )
 
     def __init__(
@@ -145,6 +147,8 @@ class Converter(object):
         self._union_registry = {}
 
         self._forward_ref_owners_registry = {}
+        self._updated_forward_ref_owners = set()
+        self._evaluated_forward_refs_registry = {}
 
     def unstructure(self, obj):
         # type: (Any) -> Any
@@ -290,7 +294,7 @@ class Converter(object):
         conv_obj = []  # A list of converter parameters.
         for a, value in zip(cl.__attrs_attrs__, obj):  # type: ignore
             # We detect the type by the metadata.
-            self._update_forward_ref_owners_registry(a.type, cl)
+            self._update_forward_ref_owners(name, type_, cl)
             converted = self._structure_attr_from_tuple(a, a.name, value)
             conv_obj.append(converted)
 
@@ -322,7 +326,7 @@ class Converter(object):
 
             if name[0] == "_":
                 name = name[1:]
-            self._update_forward_ref_owners_registry(type_, cl)
+            self._update_forward_ref_owners(name, type_, cl)
             conv_obj[name] = (
                 dispatch(type_)(val, type_) if type_ is not None else val
             )
@@ -412,13 +416,16 @@ class Converter(object):
 
     def _structure_forward_ref(self, obj, ref):
         """Deal with converting a _ForwardRef."""
-        owner_class = self._forward_ref_owners_registry[ref]
-        globalns = vars(sys.modules[owner_class.__module__])
-        localns = getattr(owner_class, "__dict__", {})
-        try:
-            ref_type = ref._evaluate(globalns, localns)
-        except AttributeError:
-            ref_type = ref._eval_type(globalns, localns)
+        ref_type = self._evaluated_forward_refs_registry.get(ref)
+        if ref_type is None:
+            owner_class = self._forward_ref_owners_registry[ref]
+            globalns = vars(sys.modules[owner_class.__module__])
+            localns = getattr(owner_class, "__dict__", {})
+            try:
+                ref_type = ref._evaluate(globalns, localns)
+            except AttributeError:
+                ref_type = ref._eval_type(globalns, localns)
+            self._evaluated_forward_refs_registry[ref] = ref_type
         return self._structure_func.dispatch(ref_type)(obj, ref_type)
 
     def _structure_tuple(self, obj, tup):
@@ -457,6 +464,12 @@ class Converter(object):
                 "currently. Register a loads hook manually."
             )
         return create_uniq_field_dis_func(*union_types)
+
+    def _update_forward_ref_owners(self, name, type, cls):
+        if (cls, name) in self._updated_forward_ref_owners:
+            return
+        self._update_forward_ref_owners_registry(type, cls)
+        self._updated_forward_ref_owners.add((cls, name))
 
     def _update_forward_ref_owners_registry(self, type, cls):
         if is_forward_ref_type(type):
